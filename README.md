@@ -7,7 +7,7 @@ This is the source code for the paper: [Experimentally realized memristive memor
 Run following command in your directory:
 
 ```shell
-git clone
+git clone https://github.com/Jaylenne/TLSH_MANN.git
 pip install -r requirements.txt
 ```
 
