@@ -2,6 +2,34 @@
 
 This is the source code for the paper: [Experimentally realized memristive memory augmented neural networks](https://arxiv.org/abs/2204.07429). We implement the training and inference for the full precision model along with the TLSH and TCAM simulation for crossbar arrays. We also reproduce the result in [Robust high-dimensional memory-augmented neural networks](https://www.nature.com/articles/s41467-021-22364-0) in `./HD-MANN` and compare it with ours.
 
+## Code structure
+
+* TLSH_MANN
+
+  `HD-MANN`: Code and model for reproducing the results in High-dimensional MANN
+
+  `configs`: Configs for training the model and inference on the LSH and TLSH + TCAM
+
+  `results`: Model and inference checkpoint
+
+  `memory.py`: Memory module in TLSH_MANN
+
+  `omniglot.py`: Batching training and set sample`
+
+  `cnn.py`: Main training code
+
+  `data_utils.py`: Downloading and preprocessing Omniglot dataset
+
+  `dpe_tcam.py`: Utils for simulating crossbar-based TCAM
+
+  `lib_lsh.py`: Functions for LSH simulation
+
+  `lib_simlsh`: Functions for simulating TLSH
+
+  `simArrayPy.py`: Simulating the IR drop (wire resistance) in crossbar arrays
+
+  `LSHsim.py`: Simulating the LSH and TLSH+TCAM based on the trained model
+
 ## Installation
 
 Run following command in your directory:
