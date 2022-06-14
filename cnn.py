@@ -55,12 +55,14 @@ class Net(nn.Module):
         p = 0.3
 
         ch, row, col = input_shape
-        self.conv1 = nn.Conv2d(ch, 64, kernel, padding=(pad, pad))
-        self.conv2 = nn.Conv2d(64, 64, kernel, padding=(pad, pad))
+        self.conv1 = nn.Conv2d(ch, 64, kernel, padding=(0, 0))
+        self.conv2 = nn.Conv2d(64, 64, kernel, padding=(0, 0))
         self.conv3 = nn.Conv2d(64, 128, kernel, padding=(pad, pad))
         self.conv4 = nn.Conv2d(128, 128, kernel, padding=(pad, pad))
+        self.conv5 = nn.Conv2d(128, 256, kernel, padding=(pad, pad))
+        self.conv6 = nn.Conv2d(256, 256, kernel, padding=(pad, pad))
         self.pool = nn.MaxPool2d(2, 2)
-        self.fc1 = nn.Linear(row // 4 * col // 4 * 128, keydim)
+        self.fc1 = nn.Linear(2304, keydim)
         self.dropout = nn.Dropout(p)
 
     def forward(self, x):
@@ -70,7 +72,11 @@ class Net(nn.Module):
         x = F.relu(self.conv3(x))
         x = F.relu(self.conv4(x))
         x = self.pool(x)
+        x = F.relu(self.conv5(x))
+        x = F.relu(self.conv6(x))
+        x = self.pool(x)
         x = x.view(x.size(0), -1)
+        x = self.dropout(x)
         x = self.fc1(x)
         x = self.dropout(x)
         return x
@@ -96,7 +102,7 @@ def setup_seed(seed):
     torch.backends.cudnn.enabled = True
 
 
-def save_checkpoint(state, is_best, folder, filename='checkpoint.pth.tar'):
+def save_checkpoint(state, is_best, folder, filename='model_best.pth.tar'):
     if not osp.exists(folder):
         os.umask(0)
         os.makedirs(folder, mode=0o777, exist_ok=False)
@@ -106,7 +112,7 @@ def save_checkpoint(state, is_best, folder, filename='checkpoint.pth.tar'):
 
 
 def load_checkpoint(folder, is_best=True):
-    filename = 'model_best.pth.tar' if is_best else 'checkpoint.pth.tar'
+    filename = 'model_best.pth.tar' if is_best else 'model_best.pth.tar'
     path = osp.join(folder, filename)
     loaded_checkpoint = torch.load(path, map_location='cuda')
     return loaded_checkpoint

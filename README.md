@@ -1,6 +1,6 @@
 # TLSH + TCAM for accelerating MANN on crossbar arrays
 
-This is the source code for the paper: [Experimentally realized memristive memory augmented neural networks](https://arxiv.org/abs/2204.07429). We implement the training and inference for the full precision model along with the TLSH and TCAM simulation for crossbar arrays. 
+This is the source code for the paper: [Experimentally realized memristive memory augmented neural networks](https://arxiv.org/abs/2204.07429). We implement the training and inference for the full precision model along with the TLSH and TCAM simulation for crossbar arrays. We also reproduce the result in [Robust high-dimensional memory-augmented neural networks](https://www.nature.com/articles/s41467-021-22364-0) in `./HD-MANN` and compare it with ours.
 
 ## Installation
 
@@ -43,20 +43,25 @@ python LSHsim.py -c ./configs/lshconfig.config
 
 ### Full precision accuracy on different key dimension
 
-To provide better reproductivity of our results, we provide the our trained model in the directory: `./results`. We provide 3 models with different key dimension: 32, 64 and 256. The model is tested on 3 tasks: 5-way 1-shot, 20-way 5-shot, 100-way 5-shot.
+To provide better reproductivity of our results, we provide the our trained model in the directory: `./results`. We provide 2 models with different key dimension: 32 and 512. The model is tested on 3 tasks: 5-way 1-shot, 20-way 5-shot, 100-way 5-shot and is averaged on 1000 episodes run. We also provide the results of HD-MANN in `./HD-MANN/results` to give a direct comparison.
 
-|      Task      | [32dim](./results/model/32dim/model_best.pth.tar) | [64 dim](./results/model/64dim/model_best.pth.tar) | [256 dim](./results/model/256dim/model_best.pth.tar) |
-| :------------: | :------------------------------------------------ | -------------------------------------------------- | ---------------------------------------------------- |
-|  5-way 1-shot  | 93.27%                                            | 96.63%                                             | 97.02%                                               |
-| 20--way 5-shot | 97.05%                                            | 97.61%                                             | 97.82%                                               |
-| 100-way 5-shot | 92.55%                                            | 93.02%                                             | 92.64%                                               |
+|      Task      | [32dim](./results/model/32dim/model_best.pth.tar) | [512 dim](./results/model/512dim/model_best.pth.tar) | HD-MANN 32dim                                                | HD-MANN 512dim                                               |
+| :------------: | :------------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+|  5-way 1-shot  | 95.20%                                            | 97.21%                                               | [97.08%](./HD-MANN/results/32dim/5way1shot32dim_best.pth.tar) | [97.74%](./HD-MANN/results/512dim/5way1shot512dim_best.pth.tar) |
+| 20--way 5-shot | 97.45%                                            | 98.10%                                               | [97.80%](./HD-MANN/results/32dim/20way5shot32dim_best.pth.tar) | [98.09%](./HD-MANN/results/512dim/20way5shot512dim_best.pth.tar) |
+| 100-way 5-shot | 92.90%                                            | 94.93%                                               | [92.59%](./HD-MANN/results/32dim/100way5shot32dim_best.pth.tar) | [94.62%](./HD-MANN/results/512dim/100way5shot512dim_best.pth.tar) |
 
 ### TLSH + TCAM accuracy simulated for crossbar arrays
 
-The figure shows the classification accuracy versus TLSH key dimension on the 100-way 5-shot problem. We compare the simulation (with experimentally validated data) and ideal LSH in software and the full-precision accuracy using 64 key dimension.
+Here we report the ideal LSH using software and TLSH +TCAM simulation with 512 `key_dim`. In the TLSH+TCAM simulation, we consider the **conductance relaxation**, **conductance fluctuation**, and **wire resistance** for $64\times64$ crossbar arrays. The code to simulate the wire resistance in crossbar array is in `./simArrayPy.py` The hashing is based on 32 `key_dim` real-valued vectors. We also provide our inference checkpoint in `./results/LSH_inference`.
 
-![](./results/figure/LSHomni_64keydim_cos_lsh_xbar.svg)
+| Task           | LSH    | TLSH+TCAM |
+| -------------- | ------ | --------- |
+| 5-way 1-shot   | 97.82% | 97.64%    |
+| 20-way 5-shot  | 97.71% | 97.52%    |
+| 100-way 5-shot | 92.39% | 91.56%    |
 
 ## Acknowledgement
 
-Part of the code is borrowed from [LSH_Memory](https://github.com/RUSH-LAB/LSH_Memory) for the ICLR paper: [Learning to remember rare events](https://arxiv.org/abs/1703.03129). We thank the open-source implementations. We also thank the collaborators' (Rui Lin) [BAT-MANN](https://github.com/RuiLin0212/BATMANN) for reproduction of [HD-MANN](https://www.nature.com/articles/s41467-021-22364-0).
+Part of the code is borrowed from [LSH_Memory](https://github.com/RUSH-LAB/LSH_Memory) for the ICLR paper: [Learning to remember rare events](https://arxiv.org/abs/1703.03129). We thank the open-source implementations. We also thank the collaborators' (Rui Lin) [BAT-MANN](https://github.com/RuiLin0212/BATMANN) and open source code [HD-MANN](https://github.com/DailinH/HD-MANN) for reproduction of [Robust high-dimensional memory-augmented neural networks](https://www.nature.com/articles/s41467-021-22364-0).
+

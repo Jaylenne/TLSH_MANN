@@ -1,12 +1,21 @@
 import os
+import sys
+import numpy as np
 import random
 import logging
 import datetime
-
+import shutil
+import os.path as osp
+import argparse
 import configargparse
 
 import torch
+import torchvision
+import torchvision.transforms as transforms
+# from torch.utils.tensorboard import SummaryWriter
 
+from torch.autograd import Variable
+import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
@@ -36,6 +45,8 @@ parser.add_argument('--seed', default=43, type=int, help='Random seed')
 parser.add_argument('--ideallshsim', action='store_true', help='Do the ideal LSH simulation')
 parser.add_argument('--crossbarsim', action='store_true', help='Do crossbar simulation')
 parser.add_argument('--update', action='store_true', help='Do the binary memory update')
+parser.add_argument('--sum-argmax', action='store_true', help='Do the sum argmax')
+parser.add_argument('--real-eval', action='store_true', help='Do the real value model evaluation')
 
 
 class Net(nn.Module):
@@ -47,12 +58,14 @@ class Net(nn.Module):
         p = 0.3
 
         ch, row, col = input_shape
-        self.conv1 = nn.Conv2d(ch, 64, kernel, padding=(pad, pad))
-        self.conv2 = nn.Conv2d(64, 64, kernel, padding=(pad, pad))
+        self.conv1 = nn.Conv2d(ch, 64, kernel, padding=(0, 0))
+        self.conv2 = nn.Conv2d(64, 64, kernel, padding=(0, 0))
         self.conv3 = nn.Conv2d(64, 128, kernel, padding=(pad, pad))
         self.conv4 = nn.Conv2d(128, 128, kernel, padding=(pad, pad))
+        self.conv5 = nn.Conv2d(128, 256, kernel, padding=(pad, pad))
+        self.conv6 = nn.Conv2d(256, 256, kernel, padding=(pad, pad))
         self.pool = nn.MaxPool2d(2, 2)
-        self.fc1 = nn.Linear(row // 4 * col // 4 * 128, keydim)
+        self.fc1 = nn.Linear(2304, keydim)
         self.dropout = nn.Dropout(p)
 
     def forward(self, x):
@@ -62,7 +75,11 @@ class Net(nn.Module):
         x = F.relu(self.conv3(x))
         x = F.relu(self.conv4(x))
         x = self.pool(x)
+        x = F.relu(self.conv5(x))
+        x = F.relu(self.conv6(x))
+        x = self.pool(x)
         x = x.view(x.size(0), -1)
+        x = self.dropout(x)
         x = self.fc1(x)
         x = self.dropout(x)
         return x
@@ -107,53 +124,86 @@ def main():
 
     net.eval()
     Acc_all = []
-    for i, data in tqdm(enumerate(testloader)):
-        accs = []
-        # Extracting feature vectors using model
-        support_x, support_y, query_x, query_y = data
-        query_x = query_x.cuda()
-        support_x = torch.cat(support_x, dim=0).cuda()
-        support_y = torch.tensor(support_y)
+    if args.real_eval:
+        logger.info(f"Evaluate specific {args.eval_way}-way {args.eval_shot}-shot")
+        evaluation_all = []
+        for data in tqdm(testloader):
+            support_x, support_y, query_x, query_y = data
+            evaluation = eval_fewshot(net, mem, support_x, support_y, query_x, query_y)
+            evaluation_all.extend(evaluation)
 
-        support_x_embed = mem.extract(net(support_x))
-        query_x_embed = mem.extract(net(query_x))
-        # LSH+TCAM simulation
-        # LSH using crossbar arrays
-        train_input = support_x_embed.detach().cpu().numpy()
-        test_input = query_x_embed.detach().cpu().numpy()
-        train_label = support_y.detach().numpy()
-        test_label = query_y.detach().numpy()
-        for d in args.lshdim:
-            if args.ideallshsim:
-                acc = metric_hamming(train_input, test_input, train_label, test_label, dim_plane=d, update=args.update)
-                accs.append(acc)
-            if args.crossbarsim:
-                Gmap = np.exp(np.random.randn(args.key_dim, d + 1) * 1.1 + 0.8)
-                G = g_reconstruct(Gmap, r_size=args.asize, c_size=args.asize)
+        logger.info(f"{args.eval_way}-way {args.eval_shot}-shot mean accuracy: {np.mean(evaluation_all)}")
+        logger.info(f"{args.eval_way}-way {args.eval_shot}-shot maximum accuracy: {np.array(evaluation_all).reshape(-1, args.eval_episode).mean(axis=0).max()}")
+        np.savez(f'./LSHomni/results/RealEval_{args.eval_way}way_{args.eval_shot}shot_{args.key_dim}dim'+datestr, Acc_all=evaluation_all)
+    else:
+        for i, data in tqdm(enumerate(testloader)):
+            accs = []
+            # Extracting feature vectors using model
+            support_x, support_y, query_x, query_y = data
+            query_x = query_x.cuda()
+            support_x = torch.cat(support_x, dim=0).cuda()
+            support_y = torch.tensor(support_y)
 
-                train_hashcode, test_hashcode = crossbarlsh_wr_app(train_input, test_input, train_label, test_label, G,
-                                                                   hashbits=d, bias=0.4, method='TLSH')
-                # TCAM and accuracy calculations
-                if args.update:
-                    train_hashcode_update, train_label_update = memoryupdate_binary(train_hashcode, train_label)
-                    acc = crossbartcam_wr_app(train_hashcode_update, test_hashcode, train_label_update, test_label, size=args.asize)
-                else:
-                    acc = crossbartcam_wr_app(train_hashcode, test_hashcode, train_label, test_label, size=args.asize)
-                accs.append(acc)
+            support_x_embed = net.memory.extract(net(support_x))
+            query_x_embed = net.memory.extract(net(query_x))
+            # LSH+TCAM simulation
+            # LSH using crossbar arrays
+            train_input = support_x_embed.detach().cpu().numpy()
+            test_input = query_x_embed.detach().cpu().numpy()
+            train_label = support_y.detach().numpy()
+            test_label = query_y.detach().numpy()
+            for d in args.lshdim:
+                if args.ideallshsim:
+                    acc = metric_hamming(train_input, test_input, train_label, test_label, dim_plane=d, update=args.update, sum_argmax=args.sum_argmax)
+                    accs.append(acc)
+                if args.crossbarsim:
+                    Gmap = np.exp(np.random.randn(args.key_dim, d + 1) * 1.1 + 0.8)
+                    G = g_reconstruct(Gmap, r_size=args.asize, c_size=args.asize)
 
-        Acc_all.append(accs)
-        tem_acc = np.array(Acc_all)
+                    train_hashcode, test_hashcode = crossbarlsh_wr_app(train_input, test_input, train_label, test_label, G,
+                                                                       hashbits=d, bias=0.4, method='TLSH')
+                    # TCAM and accuracy calculations
+                    if args.update:
+                        train_hashcode_update, train_label_update = memoryupdate_binary(train_hashcode, train_label)
+                        acc = crossbartcam_wr_app(train_hashcode_update, test_hashcode, train_label_update, test_label, size=args.asize)
+                    else:
+                        acc = crossbartcam_wr_app(train_hashcode, test_hashcode, train_label, test_label, size=args.asize)
+                    accs.append(acc)
 
-        if i % 20 == 0:
-            for ld in range(len(args.lshdim)):
-                logger.info(f"Average accuracy at {i+1} episode: {tem_acc.mean(axis=0)[ld]}")
+            Acc_all.append(accs)
+            tem_acc = np.array(Acc_all)
 
-    Acc_all = np.array(Acc_all)
-    for j in range(len(args.lshdim)):
-        logger.info(f"LSH dim: {args.lshdim[j]}, Mean accuracy over {args.eval_episode}: {Acc_all.mean(axis=0)[j]}")
+            if i % 20 == 0:
+                for ld in range(len(args.lshdim)):
+                    logger.info(f"Average accuracy at {i+1} episode: {tem_acc.mean(axis=0)[ld]}")
 
-    np.savez(f'./LSHomni/results/LSHomni_update_{args.eval_way}-way_{args.eval_shot}-shot_{args.eval_episode}-'
-             f'episode_lshdim-{args.lshdim}_arraysize-{args.asize}_keydim-{args.key_dim}_'+datestr, Acc_total=Acc_all)
+        Acc_all = np.array(Acc_all)
+        for j in range(len(args.lshdim)):
+            logger.info(f"LSH dim: {args.lshdim[j]}, Mean accuracy over {args.eval_episode}: {Acc_all.mean(axis=0)[j]}")
+
+        np.savez(f'./LSHomni/results/LSHomni_ideal_{args.eval_way}-way_{args.eval_shot}-shot_{args.eval_episode}-'
+                 f'episode_lshdim-{args.lshdim}_arraysize-{args.asize}_keydim-{args.key_dim}_'+datestr, Acc_total=Acc_all)
+
+
+def eval_fewshot(model, mem, support_x, support_y, query_x, query_y):
+    """
+    Perform one N-way K-shot evaluation
+    Return:
+    """
+    model.eval()
+    mem.build()  # clear the memory
+    # Update the memory for N-way K-shot images
+    for xx, yy in zip(support_x, support_y):
+        xx_cuda, yy_cuda = xx.cuda(), yy.cuda()
+        query = model(xx_cuda)
+        mem.query(query, yy_cuda, True)
+
+    # Use remaining images to do evaluation on the updated memory
+    query_x_cuda = query_x.cuda()
+    query = model(query_x_cuda)
+    yy_hat, _ = mem.predict(query)
+    evaluation = torch.eq(yy_hat.detach().cpu(), query_y.unsqueeze(dim=1)).squeeze().numpy().astype('float')
+    return evaluation
 
 
 def setup_seed(seed):
@@ -333,17 +383,29 @@ def memoryupdate_binary(mem_lsh, memkey):
     return np.array(memory), np.array(key)
 
 
-def metric_hamming(train_input, test_input, train_label, test_label, dim_plane=1024, update=True):
+def metric_hamming(train_input, test_input, train_label, test_label, dim_plane=1024, update=True, sum_argmax=False):
     h_plane = np.random.randn(train_input.shape[-1], dim_plane)
     train_hashcode = ((train_input @ h_plane) > 0).astype(int)
 
     if update:
         train_hashcode, train_label = memoryupdate_binary(train_hashcode, train_label)
+        print(train_label.shape)
 
     test_hashcode = ((test_input @ h_plane) > 0).astype(int)
     hamming_d = tcam_logicalxor(test_hashcode[:, None, :], train_hashcode[None, :, :]).sum(-1)
-    idx = np.array(train_label)[np.argmin(hamming_d, axis=-1)]
-    acc = (idx == test_label).astype(int).sum() / len(test_label)
+
+    if sum_argmax:
+        id = np.identity(train_label.max() + 1)
+        onehot = []
+        for i in train_label:
+            onehot.append(id[i])
+        onehot = np.vstack(onehot)
+        hd_sum = hamming_d @ onehot
+        idx = np.argmin(hd_sum, axis=-1)
+        acc = (idx == test_label).astype(int).sum() / len(test_label)
+    else:
+        idx = np.array(train_label)[np.argmin(hamming_d, axis=-1)]
+        acc = (idx == test_label).astype(int).sum() / len(test_label)
 
     return acc
 
