@@ -42,12 +42,15 @@ parser.add_argument('--eval-way', default=5, type=int, help='Evaluation way')
 parser.add_argument('--eval-shot', default=1, type=int, help='Evaluation shot')
 parser.add_argument('--eval-episode', default=1000, type=int, help='Evaluation episode')
 parser.add_argument('--savedir', default=None, type=str, help='Model saving directory')
+parser.add_argument('--ch-last', default=128, type=int,
+                    help='Channel number of the last convolution layers in CNN, to match the parameter count')
+
 
 args = parser.parse_args()
 
 
 class Net(nn.Module):
-    def __init__(self, input_shape, keydim=128):
+    def __init__(self, input_shape, keydim=128, ch_last=args.ch_last):
         super(Net, self).__init__()
         # Constants
         kernel = 3
@@ -59,10 +62,10 @@ class Net(nn.Module):
         self.conv2 = nn.Conv2d(64, 64, kernel, padding=(0, 0))
         self.conv3 = nn.Conv2d(64, 128, kernel, padding=(pad, pad))
         self.conv4 = nn.Conv2d(128, 128, kernel, padding=(pad, pad))
-        self.conv5 = nn.Conv2d(128, 256, kernel, padding=(pad, pad))
-        self.conv6 = nn.Conv2d(256, 256, kernel, padding=(pad, pad))
+        self.conv5 = nn.Conv2d(128, ch_last, kernel, padding=(pad, pad))
+        self.conv6 = nn.Conv2d(ch_last, ch_last, kernel, padding=(pad, pad))
         self.pool = nn.MaxPool2d(2, 2)
-        self.fc1 = nn.Linear(2304, keydim)
+        self.fc1 = nn.Linear(9 * ch_last, keydim)
         self.dropout = nn.Dropout(p)
 
     def forward(self, x):

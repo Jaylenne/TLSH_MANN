@@ -53,7 +53,7 @@ After downloading, the `train_omni.pkl` and `test_omni.pkl` should be in your di
 
 ### Train the model
 
-We provide the configs for training the model in `./configs/trainconfig.config`.You can modify the configs in the `.config`file. The discription of the arguments can be found in `./cnn.py`file. To start training the model, run:
+We provide the configs for training the model in `./configs/trainconfig.config`.You can modify the configs in the `.config`file. The description of the arguments can be found in `./cnn.py`file. To start training the model, run:
 
 ```shell
 python cnn.py -c ./configs/trainconfig.config
@@ -69,15 +69,15 @@ python LSHsim.py -c ./configs/lshconfig.config
 
 ## Experimental results
 
-### Full precision accuracy on different key dimension
+### Full precision accuracy on different key dimensions
 
-To provide better reproductivity of our results, we provide the our trained model in the directory: `./results`. We provide 2 models with different key dimension: 32 and 512. The model is tested on 3 tasks: 5-way 1-shot, 20-way 5-shot, 100-way 5-shot and is averaged on 1000 episodes run. We also provide the results of HD-MANN in `./HD-MANN/results` to give a direct comparison.
+To provide better reproductivity of our results, we provide our trained model in the directory: `./results`. We provide 2 models with different key dimensions: 32 and 512. Specifically, to match the parameters count with the HD method, we use different  `ch_last` in the CNN model. For the model with 32-dimensional output, we use 256 `ch_last`. For the model with 512-dimensional output, we use 128 `ch_last` . The model is tested on 3 tasks: 5-way 1-shot, 20-way 5-shot, 100-way 5-shot and is averaged on 1000 episodes run. We also provide the results of HD-MANN in `./HD-MANN/results` to give a direct comparison.
 
 |      Task      | [32dim](./results/model/32dim/model_best.pth.tar) | [512 dim](./results/model/512dim/model_best.pth.tar) | HD-MANN 32dim                                                | HD-MANN 512dim                                               |
 | :------------: | :------------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-|  5-way 1-shot  | 95.20%                                            | 97.21%                                               | [97.08%](./HD-MANN/results/32dim/5way1shot32dim_best.pth.tar) | [97.74%](./HD-MANN/results/512dim/5way1shot512dim_best.pth.tar) |
-| 20--way 5-shot | 97.45%                                            | 98.10%                                               | [97.80%](./HD-MANN/results/32dim/20way5shot32dim_best.pth.tar) | [98.09%](./HD-MANN/results/512dim/20way5shot512dim_best.pth.tar) |
-| 100-way 5-shot | 92.90%                                            | 94.93%                                               | [92.59%](./HD-MANN/results/32dim/100way5shot32dim_best.pth.tar) | [94.62%](./HD-MANN/results/512dim/100way5shot512dim_best.pth.tar) |
+|  5-way 1-shot  | 95.20%                                            | 97.27%                                               | [97.08%](./HD-MANN/results/32dim/5way1shot32dim_best.pth.tar) | [97.74%](./HD-MANN/results/512dim/5way1shot512dim_best.pth.tar) |
+| 20--way 5-shot | 97.45%                                            | 98.45%                                               | [97.80%](./HD-MANN/results/32dim/20way5shot32dim_best.pth.tar) | [98.09%](./HD-MANN/results/512dim/20way5shot512dim_best.pth.tar) |
+| 100-way 5-shot | 92.90%                                            | 95.01%                                               | [92.59%](./HD-MANN/results/32dim/100way5shot32dim_best.pth.tar) | [94.62%](./HD-MANN/results/512dim/100way5shot512dim_best.pth.tar) |
 
 ### TLSH + TCAM accuracy simulated for crossbar arrays
 
@@ -91,5 +91,5 @@ Here we report the ideal LSH using software and TLSH +TCAM simulation with 512 `
 
 ## Acknowledgement
 
-Part of the code is borrowed from [LSH_Memory](https://github.com/RUSH-LAB/LSH_Memory) for the ICLR paper: [Learning to remember rare events](https://arxiv.org/abs/1703.03129). We thank the open-source implementations. We also thank the collaborators' (Rui Lin) [BAT-MANN](https://github.com/RuiLin0212/BATMANN) and open source code [HD-MANN](https://github.com/DailinH/HD-MANN) for reproduction of [Robust high-dimensional memory-augmented neural networks](https://www.nature.com/articles/s41467-021-22364-0).
+Part of the code is borrowed from [LSH_Memory](https://github.com/RUSH-LAB/LSH_Memory) for the ICLR paper: [Learning to remember rare events](https://arxiv.org/abs/1703.03129). We thank the open-source implementations. We also thank the collaborators' (Rui Lin) [BAT-MANN](https://github.com/RuiLin0212/BATMANN) and open source code [HD-MANN](https://github.com/DailinH/HD-MANN) for the reproduction of [Robust high-dimensional memory-augmented neural networks](https://www.nature.com/articles/s41467-021-22364-0).
 
