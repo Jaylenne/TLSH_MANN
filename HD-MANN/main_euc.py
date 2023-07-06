@@ -203,7 +203,7 @@ if __name__ == '__main__':
     #acc = np.asarray(acc)
 
     # evaluation
-    model.load_state_dict(torch.load(f'./euclidean-results/{exp_name}_best.pth.tar'))
+    model.load_state_dict(torch.load(f'./results_euc/{exp_name}_best.pth.tar'))
     #acc = inference(model, data_gen, device, key_mem_transform=bipolarize, sum_argmax=False, type='test')
     acc = inference(model, data_gen, device, num_bits, 0.2, data, key_mem_transform=None, sum_argmax=False, type='test')
     
