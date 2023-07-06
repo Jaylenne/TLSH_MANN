@@ -12,6 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 from more_itertools import unzip
 import shutil
 from tqdm import tqdm
+import csv
 
 from cnn import CNNController
 from data_generator import DataGenerator
@@ -173,8 +174,8 @@ if __name__ == '__main__':
   if torch.cuda.is_available():
     device = torch.device('cuda')
 
-    num_bits = 2
-    num_domains = 20
+    num_bits = 3
+    num_domains = 150
     csv_file_path = f'./var_data/{num_bits}bit/{num_domains}dom.csv'
     with open(csv_file_path, 'r') as file:
         csv_reader = csv.reader(file)
