@@ -11,4 +11,4 @@ module load cuda/10.2 cudnn/8.0.4
 
 conda activate mann-env
 
-python main_euc_quantized.py
+python main_euc.py
