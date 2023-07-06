@@ -13,7 +13,7 @@ class DataGenerator(object):
         self.ways = ways
         self.shots = shots
         
-        data_folder = config.get('data_folder', '/home/maorb/OneDrive/CANlab_server/HD-MANN/dataset/dataset')
+        data_folder = config.get('data_folder', './omniglot/python/dataset')
 
         self.image_size = config.get('image_size', (32, 32))
         self.input_dim = np.prod(self.image_size)
