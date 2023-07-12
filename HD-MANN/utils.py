@@ -112,3 +112,19 @@ def csv_prob_dist_variation(x, n_bits, data):
         prob_dist[dist_row_idx][dist_col_idx] = var * 2**n_bits
 
     return prob_dist
+
+def csv_numpy_variation(x, n_bits, data):
+    prob_dist = np.zeros_like(x)
+    num_cols = len(data[0])
+    num_elements = x.shape[0] * x.shape[1]
+    
+    for idx in range(num_elements):
+        support_key = int(x.flatten()[idx])
+        col_idx = random.choice(range(0, num_cols))
+        var = float(data[support_key][col_idx])
+
+        dist_row_idx = idx // x.shape[1]
+        dist_col_idx = idx % x.shape[1]
+        prob_dist[dist_row_idx][dist_col_idx] = var * 2**n_bits
+
+    return prob_dist
